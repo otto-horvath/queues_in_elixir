@@ -1,17 +1,17 @@
-defmodule StockMonitor.Queue do
+defmodule Stx.Queue do
   require Logger
 
   use GenServer
 
-  import StockMonitor
+  import Stx
+
+  def start_link(args) do
+    GenServer.start_link(__MODULE__, args, name: StockQueue)
+  end
 
   @impl true
   def init(args) do
     {:ok, args}
-  end
-
-  def start_link(args) do
-    GenServer.start_link(__MODULE__, args, name: StockQueue)
   end
 
   @impl true
@@ -20,7 +20,9 @@ defmodule StockMonitor.Queue do
 
     stocks_observers
     |> Map.get(stock, [])
-    |> Enum.each(&(post_stock_price(&1, stock, price)))
+    |> Enum.each(fn subscriber ->
+      GenServer.cast(subscriber, {:notify, %{stock: stock, price: price}})
+    end)
 
     {:noreply, stocks_observers}
   end
@@ -65,9 +67,4 @@ defmodule StockMonitor.Queue do
       Map.update(subscribers, stock, [observer], fn subs -> [observer | subs] end)
     end)
   end
-
-  defp post_stock_price(observer, stock, price) do
-    GenServer.cast(observer, {:receive, %{stock: stock, price: price}})
-  end
-
 end

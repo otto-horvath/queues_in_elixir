@@ -1,14 +1,14 @@
-defmodule StockMonitor.Observer do
+defmodule Stx.Observer do
   require Logger
   use GenServer
-  import StockMonitor
+  import Stx
+
+  def subscribe(stocks) do
+    DynamicSupervisor.start_child(Stx.ObserversSupervisor, {Stx.Observer, stocks})
+  end
 
   def start_link(stocks) do
-
-    stocks_names = stocks |> Enum.map(&Atom.to_string/1) |> Enum.join("_")
-    name = "observer_#{stocks_names}_#{random_id()}" |> String.to_atom()
-
-    GenServer.start_link(__MODULE__, stocks, name: name)
+    GenServer.start_link(__MODULE__, stocks, name: generate_name(stocks))
   end
 
   @impl true
@@ -19,12 +19,12 @@ defmodule StockMonitor.Observer do
   @impl true
   def handle_continue(:subscribe, stocks) do
     Process.flag(:trap_exit, true)
-    StockMonitor.Queue.subscribe(self(), stocks)
+    Stx.Queue.subscribe(self(), stocks)
     {:noreply, stocks}
   end
 
   @impl true
-  def handle_cast({:receive, %{stock: stock, price: price}}, _state) do
+  def handle_cast({:notify, %{stock: stock, price: price}}, _state) do
     Logger.info("Observer #{process_name()}::received #{stock}:$#{price}")
 
     {:noreply, []}
@@ -41,8 +41,12 @@ defmodule StockMonitor.Observer do
 
   @impl true
   def terminate(_reason, _state) do
-    StockMonitor.Queue.unsubscribe(self())
+    Stx.Queue.unsubscribe(self())
   end
 
+  defp generate_name(stocks), do: "observer.#{random_id()}.#{stocks_names(stocks)}" |> String.to_atom()
+
   defp random_id(), do: :crypto.strong_rand_bytes(16) |> Base.encode16() |> String.slice(0..3)
+
+  defp stocks_names(stocks), do: stocks |> Enum.map(&Atom.to_string/1) |> Enum.join("_")
 end

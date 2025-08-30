@@ -1,4 +1,4 @@
-defmodule StockMonitor.Observers do
+defmodule Stx.ObserversSupervisor do
   use DynamicSupervisor
 
   def start_link(args) do
@@ -8,9 +8,5 @@ defmodule StockMonitor.Observers do
   @impl true
   def init(_) do
     DynamicSupervisor.init(strategy: :one_for_one)
-  end
-
-  def new_observer(stocks) do
-    DynamicSupervisor.start_child(__MODULE__, {StockMonitor.Observer, stocks})
   end
 end
