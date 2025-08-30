@@ -19,15 +19,17 @@ defmodule Stx.Observer do
   @impl true
   def handle_continue(:subscribe, stocks) do
     Process.flag(:trap_exit, true)
+
     Stx.Queue.subscribe(self(), stocks)
+
     {:noreply, stocks}
   end
 
   @impl true
-  def handle_cast({:notify, %{stock: stock, price: price}}, _state) do
+  def handle_cast({:notify, %{stock: stock, price: price}}, state) do
     Logger.info("Observer #{process_name()}::received #{stock}:$#{price}")
 
-    {:noreply, []}
+    {:noreply, state}
   end
 
   @impl true
@@ -44,9 +46,15 @@ defmodule Stx.Observer do
     Stx.Queue.unsubscribe(self())
   end
 
-  defp generate_name(stocks), do: "observer.#{random_id()}.#{stocks_names(stocks)}" |> String.to_atom()
+  defp generate_name(stocks) do
+    random_id = :crypto.strong_rand_bytes(16)
+      |> Base.encode16()
+      |> String.slice(0..3)
 
-  defp random_id(), do: :crypto.strong_rand_bytes(16) |> Base.encode16() |> String.slice(0..3)
+    stocks_list = stocks
+      |> Enum.map(&Atom.to_string/1)
+      |> Enum.join("_")
 
-  defp stocks_names(stocks), do: stocks |> Enum.map(&Atom.to_string/1) |> Enum.join("_")
+    :"observer.#{random_id}.#{stocks_list}"
+  end
 end

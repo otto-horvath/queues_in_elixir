@@ -15,56 +15,46 @@ defmodule Stx.Queue do
   end
 
   @impl true
-  def handle_cast({:push, %{stock: stock, price: price}}, stocks_observers) do
+  def handle_cast({:push, %{stock: stock, price: price}}, topics) do
     Logger.info("Queue::received #{stock}:$#{price}")
 
-    stocks_observers
+    topics
     |> Map.get(stock, [])
     |> Enum.each(fn subscriber ->
       GenServer.cast(subscriber, {:notify, %{stock: stock, price: price}})
     end)
 
-    {:noreply, stocks_observers}
+    {:noreply, topics}
   end
 
   @impl true
-  def handle_cast({:subscribe, observer, stocks}, stocks_observers) do
-    {:noreply, subscribe_observer(stocks_observers, observer, stocks)}
+  def handle_cast({:subscribe, observer, stocks}, topics) do
+    {:noreply, subscribe_observer_to_topics(topics, observer, stocks)}
   end
 
   @impl true
-  def handle_cast({:unsubscribe, observer}, stocks_observers) do
-    updated_observers = stocks_observers
-      |> Map.keys()
-      |> Enum.reduce(stocks_observers, fn stock, subscribers ->
-        Map.update!(subscribers, stock, &( List.delete(&1, observer) ))
-      end)
-
-    {:noreply, updated_observers}
+  def handle_cast({:unsubscribe, observer}, topics) do
+    {:noreply, unsubscribe_observer_from_topics(topics, observer)}
   end
 
-
-  @impl true
-  def handle_cast(:inspect, state) do
-    IO.inspect(state)
-
-    {:noreply, state}
-  end
-
-  def inspect(), do: GenServer.cast(StockQueue, :inspect)
-
-  def subscribe(observer, stocks) do
-    GenServer.cast(StockQueue, {:subscribe, observer, stocks})
-  end
+  def subscribe(observer, stocks), do: GenServer.cast(StockQueue, {:subscribe, observer, stocks})
 
   def unsubscribe(observer), do: GenServer.cast(StockQueue, {:unsubscribe, observer})
 
-  defp subscribe_observer(stocks_observers, observer, stocks) do
+  defp subscribe_observer_to_topics(topics, observer, stocks) do
     stocks
-    |> Enum.reduce(stocks_observers, fn stock, subscribers ->
+    |> Enum.reduce(topics, fn stock, subscribers ->
       Logger.info("Queue::Subscribing #{process_name(observer)} to #{stock}")
 
       Map.update(subscribers, stock, [observer], fn subs -> [observer | subs] end)
+    end)
+  end
+
+  defp unsubscribe_observer_from_topics(topics, observer) do
+    topics
+    |> Map.keys()
+    |> Enum.reduce(topics, fn stock, subscribers ->
+      Map.update!(subscribers, stock, &( List.delete(&1, observer) ))
     end)
   end
 end
