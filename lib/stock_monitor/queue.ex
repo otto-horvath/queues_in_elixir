@@ -48,12 +48,12 @@ defmodule StockMonitor.Queue do
 end
 
 
-m1 = StockMonitor.Observer.start_link(:first)
-m2 = StockMonitor.Observer.start_link(:second)
-m3 = StockMonitor.Observer.start_link(:third)
+# m1 = StockMonitor.Observer.start_link(:first)
+# m2 = StockMonitor.Observer.start_link(:second)
+# m3 = StockMonitor.Observer.start_link(:third)
 
-StockMonitor.Queue.subscribe(m1, [:BRL])
-StockMonitor.Queue.subscribe(m2, [:BRL, :XYZ])
-StockMonitor.Queue.subscribe(m3, [:NZA, :XYZ])
+# StockMonitor.Queue.subscribe(m1, [:BRL])
+# StockMonitor.Queue.subscribe(m2, [:BRL, :XYZ])
+# StockMonitor.Queue.subscribe(m3, [:NZA, :XYZ])
 
-StockMonitor.Generator.subscribe(StockQueue)
+# StockMonitor.Generator.subscribe(StockQueue)
