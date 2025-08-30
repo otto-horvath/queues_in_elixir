@@ -10,6 +10,7 @@ defmodule StockMonitor.Application do
     children = [
       {StockMonitor.Generator, %{interval: 750, subscribers: [], stocks: [:XYZ, :BRL, :NZA]}},
       {StockMonitor.Queue, %{}},
+      {StockMonitor.Observers, []}
     ]
 
     opts = [strategy: :one_for_one, name: StockMonitor.Supervisor]

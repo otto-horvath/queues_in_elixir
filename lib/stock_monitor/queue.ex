@@ -19,7 +19,7 @@ defmodule StockMonitor.Queue do
     Logger.info("Queue::received #{stock}:$#{price}")
 
     stocks_observers
-    |> Map.get(stock)
+    |> Map.get(stock, [])
     |> Enum.each(&(post_stock_price(&1, stock, price)))
 
     {:noreply, stocks_observers}
@@ -30,9 +30,32 @@ defmodule StockMonitor.Queue do
     {:noreply, subscribe_observer(stocks_observers, observer, stocks)}
   end
 
+  @impl true
+  def handle_cast({:unsubscribe, observer}, stocks_observers) do
+    updated_observers = stocks_observers
+      |> Map.keys()
+      |> Enum.reduce(stocks_observers, fn stock, subscribers ->
+        Map.update!(subscribers, stock, &( List.delete(&1, observer) ))
+      end)
+
+    {:noreply, updated_observers}
+  end
+
+
+  @impl true
+  def handle_cast(:inspect, state) do
+    IO.inspect(state)
+
+    {:noreply, state}
+  end
+
+  def inspect(), do: GenServer.cast(StockQueue, :inspect)
+
   def subscribe(observer, stocks) do
     GenServer.cast(StockQueue, {:subscribe, observer, stocks})
   end
+
+  def unsubscribe(observer), do: GenServer.cast(StockQueue, {:unsubscribe, observer})
 
   defp subscribe_observer(stocks_observers, observer, stocks) do
     stocks
@@ -43,17 +66,8 @@ defmodule StockMonitor.Queue do
     end)
   end
 
-  defp post_stock_price(observer, stock, price), do: GenServer.cast(observer, {:receive, %{stock: stock, price: price}})
+  defp post_stock_price(observer, stock, price) do
+    GenServer.cast(observer, {:receive, %{stock: stock, price: price}})
+  end
 
 end
-
-
-# m1 = StockMonitor.Observer.start_link(:first)
-# m2 = StockMonitor.Observer.start_link(:second)
-# m3 = StockMonitor.Observer.start_link(:third)
-
-# StockMonitor.Queue.subscribe(m1, [:BRL])
-# StockMonitor.Queue.subscribe(m2, [:BRL, :XYZ])
-# StockMonitor.Queue.subscribe(m3, [:NZA, :XYZ])
-
-# StockMonitor.Generator.subscribe(StockQueue)
